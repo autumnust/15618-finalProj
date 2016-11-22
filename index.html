@@ -93,6 +93,71 @@ For the fifth point made above, it is a 'Hope-to-achieve' stretch goal that we d
 For the stretch goal, there are obstacles for both implementation and experiments. For the implementation, as we have mentioned, there's no specific paper or research result that we could refer to, to handling workload under write-expensive storage medium, for a specific data structure. For the experiments, we may need to apply for the access of Non-volatile memory emulator from Prof.Andy Pavlo, this is also not guaranteed.
 </p>
 
+
+
+<h2>
+<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Midway Checkpoint</h2>
+
+<p>
+  <b>What have we been doing for this project in the past few weeks? </b>
+
+  We have throughly read the paper in which Hopscotch Hashing is proposed. By reading this paper and some other related work, such as Lea's implementation of Java's ConcurrentHashMap, we have obtained an general idea about what might affect the performance of an concurrent Hashtable, and techniques of optimization.
+
+  After we understand the details of Hopscotch Hashing, we have implemented, in java, an serial version and a coarse-grained concurrent version of it. 
+</p>
+<p>
+  <b>What have we learnt so far?</b>
+
+  Hopscotch hashing is an open addressing hashing algorithm. In the paper where Hopscotch hashing is proposed, the author gives pseudocode for the concurrent version of Hopscotch hashing. It is worth mentioning that the author uses bucket-level locking, which is fine if the only <code>contains()</code>, <code>add()</code> and <code>remove()</code> methods are needed. However in practice, some table-level lock is required, such as calls to <code>getSize()</code>, <code>isEmpty()</code> or <code>rehash()</code>. In this case, having bucket-level lock is not a good idea.
+
+  The solution is proposed by Doug Lea, in his implementation of ConcurrentHashMap. Instead of having a single table-level lock, we can have N reentrant lock, each covering a continuous portion of the array of buckets. To insert new <Key, Value> pair, simply grab the lock corresponding to the portion where the pair will be inserted. To lock the entire table, recursively grab all the locks.
+
+  We can further optimize the above locking scheme, by using 2 locks for each portion(thus 2N locks in total). One is for sharedLock(readLock), the other is for exclusiveLock(writeLock). This can be helpful, as for a typical hash table, 90% of the operations are read operations only.
+
+  Another idea we would like to try is borrow from MemC3[3], which is to separate Cuckoo path’s searching and execution, thereby reducing the size of critical section. In Hopscotch Hashing, there’s also a similar process to search a path for swapping a far empty slot into H-range of original hash position, and physically execute each elements swapping along the path. This idea is optional given the time limits.  
+</p>
+
+<h3>
+<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Project State</h3>
+<p>
+  As mentioned in the first part, we have implemented an serial version and coarse-grained concurrent version of Hopscotch hashing table in Java. We have also made it clear what will we benchmark our final implementation of Hopscotch hashing against. In particular, we will compare the speedup of fixed-size data insertion and static data read, on the latedays machines (Intel Xeon E5645 CPU) on the following occasions: 
+
+  <ul>
+      <li> A single table-level lock for read and write. </li>
+      <li> A Hashtabel-level read lock and write lock.</li>
+      <li> N locks for read and write. </li>
+      <li> N locks for read and N locks for write.</li>
+      <li> Java’s ConcurrentHashMap. </li>
+  </ul>
+
+Through the first four schemes we are aiming at verifying the scalability of our design towards multiple cores. Specifically, starting with single-core experiment, we add more cores into the experiment setting(control through CPU affinity[1]) until the change of speed up becomes non-obvious. 
+
+For the fifth point, Java’s <code>java.util.concurrent.ConcurrentHashMap</code>, to the best of our knowledge, is one of the fastest thread-safe Hash table that we can find on JVM. We will compared our Hopscotch Hashing table with this widely-used implementation in terms of read/write throughput, scalability and space efficiency. Especially, as the Hopscotch claims to maintain satisfying performance even when the Hash table is over 90% full[2], we are expecting to see the superiority, in terms of read/write throughput in such circumstance.  
+
+We have to admit, though, that we are slightly behind our schedule. So we both decided to prioritize this project and spend more time on it during the next few weeks. Hopefully by wisely spending the Thanksgiving vacation we get back on the track.
+
+</p>
+
+<h3>
+<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Poster Session</h3>
+<p>
+For Poster session, we will be presenting several graphs, including speedup, read/write throughput with respect to different number of cores. We will also have our machines set up such that people can come and see the running instances of our code, but that hardly qualifies as a demo.
+</p>
+
+<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Challenges</h3>
+<p>
+Our biggest challenge is lack of experience in designing and implementing such kind of fundamental data structure for speed. Also the separation of Hopscotch path discovery and execution requires subtle lock management. Currently we are still facing lot of nondeterministic bugs.  
+</p>
+
+
+<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Reference</h3>
+ 
+ <p>
+[1] http://stackoverflow.com/questions/8882885/is-it-possible-to-force-an-existing-java-application-to-use-no-more-than-x-cores
+[2] Herlihy, M., Shavit, N., & Tzafrir, M. (2008, September). Hopscotch hashing. In International Symposium on Distributed Computing (pp. 350-364). Springer Berlin Heidelberg.]
+[3] Fan, B., Andersen, D. G., & Kaminsky, M. (2013). MemC3: Compact and concurrent memcache with dumber caching and smarter hashing. In Presented as part of the 10th USENIX Symposium on Networked Systems Design and Implementation (NSDI 13) (pp. 371-384).
+</p>
+
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/autumnust">autumnust</a></p>
